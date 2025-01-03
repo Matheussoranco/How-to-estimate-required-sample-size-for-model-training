@@ -45,3 +45,14 @@ img_test, label_test = dataset_to_array(test_data, image_size, num_classes)
 
 num_train_samples = len(img_train)
 print(f"Number of training sample: {num_train_samples}")
+
+image_augmentation = keras.Sequential(
+    [
+        layers.RandomFlip(mode="horizontal"),
+        layers.RandomRotation(factor=0.1),
+        layers.RandomZoom(height_factor=(-0.1, -0)),
+        layers.RandomContrast(factor=0.1),
+    ],
+)
+
+img_train = image_augmentation(img_train).numpy()
