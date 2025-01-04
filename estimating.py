@@ -56,3 +56,79 @@ image_augmentation = keras.Sequential(
 )
 
 img_train = image_augmentation(img_train).numpy()
+
+def build_model(num_classes, img_size=image_size[0], top_dropout=0.3):
+    """Cria um classificador baseado em MobileNetV2 pré-treinado.
+
+    Argumentos:
+        num_classes: Int, número de classes a serem usadas na camada softmax.
+        img_size: Int, tamanho quadrado das imagens de entrada (o padrão é 224).
+        top_dropout: Int, valor para camada de eliminação (o padrão é 0,3).
+    """
+        
+    inputs = layers.Imput(shape=(img_size, img_size, 3))
+    x = layers.Rescaling(scale=1.0 / 127.5, offset=-1)(inputs)
+    model = keras.applications.MobileNetV2(
+        include_top=False, weights="imagenet", input_tensor=x
+    )
+    
+    model.trainable = False
+    
+    x= layers.GlobalAveragePooling2D(name="avh_pool")(model.output)
+    x = layers.Dropout(top_dropout)(x)
+    outputs = layers.Dense(num_classes, activation="softmax")(x)
+    model = keras.Model(inputs, outputs)
+    
+    print("Weights treináveis:", len(model.trainable_weights))
+    print("Weights não treináveis:", len(model.non_trainable_weights))
+    return model
+
+
+def compile_and_train(
+    model,
+    training_data,
+    training_labels,
+    metrics = [keras.metrics.AUC(name="auc"), "acc"],
+    optimizer = keras.optimizers.Adam(),
+    patience = 5,
+    epochs = 5,
+):
+    stopper = keras.callbacks.EarlyStopping(
+        monitor = "val_auc",
+        mode = "max",
+        min_delta = 0,
+        patience = patience,
+        verbose = 1,
+        restore_best_weights = True,
+    )
+    
+    model.compile(loss = "categorical_crossentropy", optimizer = optimizer, metrics = metrics)
+    
+    history = model.fit(
+        x = training_data,
+        y = training_labels,
+        batch_size = batch-size,
+        epochs = epochs,
+        validation_split = 0.1,
+        callbacks = [stopper],
+    )
+    return history
+
+def unfreeze(model, block_name, verbose = 0):
+    """Unfreeze as camadas do modelo do keras"""
+    
+    set_trainable = False
+    
+    for layer in model.layers:
+        if block_name in layer.name:
+            set_trainable = True
+        if set_trainable and not isinstance(layer, layers.BatchNormalization):
+            layer.trainable = True
+            if verbose == 1:
+                print(layer.name, "Treinável")
+        else:
+            if verbose == 1:
+                print(layer.name, "NÃO treinável")
+    print("Weights treináveis:", len(model.trainable_weights))
+    print("Weights não treináveis:", len(model.non_trainable_weights))
+    return model
