@@ -163,3 +163,34 @@ def train_model(training_data, training_labels):
     
     _, _, acc = model.evaluate(img_test, label_test)
     return np.round(acc,4)
+
+def train_interatively(sample_splits = [0.05, 0.1, 0.25, 0.5], iter_per_split = 5):
+    train_acc = []
+    sample_sizes = []
+    
+    for fraction in sample_splits:
+        print(f"Fraction Split: {fraction}")
+        sample_accuracy = []
+        num_samples = int(num_train_samples * fraction)
+        for i in range(iter_per_split):
+            print(f"Rode {i+1} de {iter_per_split}: ")
+            rand_idx = np.random.randint(num_train_samples, size = num_samples)
+            train_img_subset = img_train[rand_idx, :]
+            train_label_subset = label_train[rand_idx, :]
+            accuracy = train_model(train_img_subset, train_label_subset)
+            print(f"Precisão: {accuracy}")
+            sample_accuracy.append(accuracy)
+        train_acc.append(sample_accuracy)
+        sample_sizes.append(num_samples)
+    return train_acc, sample_sizes
+
+
+# Running the above function produces the following outputs
+#train_acc = [
+#    [0.8202, 0.7466, 0.8011, 0.8447, 0.8229],
+#    [0.861, 0.8774, 0.8501, 0.8937, 0.891],
+#    [0.891, 0.9237, 0.8856, 0.9101, 0.891],
+#    [0.8937, 0.9373, 0.9128, 0.8719, 0.9128],
+#]
+#
+#sample_sizes = [165, 330, 825, 1651]
