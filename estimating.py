@@ -132,3 +132,34 @@ def unfreeze(model, block_name, verbose = 0):
     print("Weights treináveis:", len(model.trainable_weights))
     print("Weights não treináveis:", len(model.non_trainable_weights))
     return model
+
+def train_model(training_data, training_labels):
+    
+    model = build_model(num_classes)
+    
+    history = compile_and_train(
+        model,
+        training_data,
+        training_labels,
+        metrics = [keras.metrics.AUC(name="auc"), "acc"],
+        optimizer = keras.optimizers.Adam(),
+        patience = 3,
+        epochs = 10,
+    )
+    
+    model = unfreeze(model, "block_10")
+    
+    fine_tune_epochs = 20
+    total_epochs = history.epoch[-1] + fine_tune_epochs
+    
+    history_fine = compile_and_train(
+        model,
+        training_data,
+        training_labels,
+        metrics = [keras.metrics.AUC(name="auc"), "acc"],
+        optimizer = keras.optimizers.Adam(learning_rate = 1e-4),
+        epochs = total_epochs,
+    )
+    
+    _, _, acc = model.evaluate(img_test, label_test)
+    return np.round(acc,4)
