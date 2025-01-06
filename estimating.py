@@ -66,7 +66,7 @@ def build_model(num_classes, img_size=image_size[0], top_dropout=0.3):
         top_dropout: Int, valor para camada de eliminação (o padrão é 0,3).
     """
         
-    inputs = layers.Imput(shape=(img_size, img_size, 3))
+    inputs = layers.Input(shape=(img_size, img_size, 3))
     x = layers.Rescaling(scale=1.0 / 127.5, offset=-1)(inputs)
     model = keras.applications.MobileNetV2(
         include_top=False, weights="imagenet", input_tensor=x
@@ -107,7 +107,7 @@ def compile_and_train(
     history = model.fit(
         x = training_data,
         y = training_labels,
-        batch_size = batch-size,
+        batch_size = batch_size,
         epochs = epochs,
         validation_split = 0.1,
         callbacks = [stopper],
@@ -186,11 +186,64 @@ def train_interatively(sample_splits = [0.05, 0.1, 0.25, 0.5], iter_per_split = 
 
 
 # Running the above function produces the following outputs
-#train_acc = [
-#    [0.8202, 0.7466, 0.8011, 0.8447, 0.8229],
-#    [0.861, 0.8774, 0.8501, 0.8937, 0.891],
-#    [0.891, 0.9237, 0.8856, 0.9101, 0.891],
-#    [0.8937, 0.9373, 0.9128, 0.8719, 0.9128],
-#]
-#
-#sample_sizes = [165, 330, 825, 1651]
+train_acc = [
+    [0.8202, 0.7466, 0.8011, 0.8447, 0.8229],
+    [0.861, 0.8774, 0.8501, 0.8937, 0.891],
+    [0.891, 0.9237, 0.8856, 0.9101, 0.891],
+    [0.8937, 0.9373, 0.9128, 0.8719, 0.9128],
+]
+
+sample_sizes = [165, 330, 825, 1651]
+
+def fit_and_predict(train_acc, sample_sizes, pred_sample_size):
+    x = sample_sizes
+    mean_acc = tf.convert_to_tensor([np.mean(i) for i in train_acc])
+    error = [np.std(i) for i in train_acc]
+    
+    mse = keras.losses.MeanSquaredError()
+    
+    def exp_func(x, a, b):
+        return a * x**b
+    
+    a = tf.Variable(0.0)
+    b = tf.Variable(0.0)
+    learning_rate = 0.01
+    training_epochs = 5000
+    
+    for epoch in range(training_epochs):
+        with tf.GradientTape() as tape:
+            y_pred = exp_func(x, a, b)
+            cost_function = mse(y_pred, mean_acc)
+        gradients = tape.gradient(cost_function, [a, b])
+        a.assign_sub(gradients[0] * learning_rate)
+        b.assign_sub(gradients[1] * learning_rate)
+    print(f"Curve fit weights: a = {a.numpy()} e b = {b.numpy()}. ")
+    
+    max_acc = exp_func(pred_sample_size, a, b).numpy()
+    
+    print(f"O modelo previu {pred_sample_size} samples com {max_acc} de precisão")
+    x_cont = np.linspace(x[0], pred_sample_size, 100)
+    
+    fig, ax = plt.subplots(figsize = (12, 6))
+    ax.errorbar(x, mean_acc, yerr=error, fmt="o", label="ACC médio & std dev.")
+    ax.plot(x_cont, exp_func(x_cont, a, b), "r-", label="Curva exponencial.")
+    ax.set_ylabel("Precisão da classificação do modelo.", fontsize=12)
+    ax.set_xlabel("Tamanho do sample de treinamento.", fontsize=12)
+    ax.set_xticks(np.append(x, pred_sample_size))
+    ax.set_yticks(np.append(mean_acc, max_acc))
+    ax.set_xticklabels(list(np.append(x, pred_sample_size)), rotation=90, fontsize=10)
+    ax.yaxis.set_tick_params(labelsize=10)
+    ax.set_title("Curva de aprendizado: Precisão do modelo vs tamanho das samples.", fontsize=14)
+    ax.legend(loc=(0.75, 0.75), fontsize=10)
+    ax.xaxis.grid(True)
+    ax.yaxis.grid(True)
+    plt.tight_layout()
+    plt.show()
+    
+    mae = keras.losses.MeanAbsoluteError()
+    print(f"O MAE para o fit da curva é {mae(mean_acc, exp_func(x, a, b)).numpy}.")
+    
+fit_and_predict(train_acc, sample_sizes, pred_sample_size = num_train_samples)
+
+accuracy = train_model(img_train, label_train)
+print(f"O modelo atinge uma precisão de {accuracy} com {num_train_samples} imagens.")
