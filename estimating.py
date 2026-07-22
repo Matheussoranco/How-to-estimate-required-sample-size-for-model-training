@@ -241,7 +241,7 @@ def fit_and_predict(train_acc, sample_sizes, pred_sample_size):
     plt.show()
     
     mae = keras.losses.MeanAbsoluteError()
-    print(f"O MAE para o fit da curva é {mae(mean_acc, exp_func(x, a, b)).numpy}.")
+    print(f"O MAE para o fit da curva é {mae(mean_acc, exp_func(x, a, b)).numpy()}.")
     
 fit_and_predict(train_acc, sample_sizes, pred_sample_size = num_train_samples)
 
