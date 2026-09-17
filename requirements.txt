@@ -1,0 +1,6 @@
+# Frozen study stack — see README. TF 2.16+ required for standalone `import keras` (Keras 3).
+tensorflow>=2.16,<2.20
+keras>=3.0,<4.0
+tensorflow-datasets>=4.9,<5.0
+numpy>=1.24,<3.0
+matplotlib>=3.8,<4.0
